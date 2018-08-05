@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Prepaid Card Mini Project</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <h1>Prepaid Card Mini Project Demo</h1>
+  <p>Cards management, implemented simple client rendering using jQuery</p>
+  <div class="content">
+      <a href="#" onclick="javascript:addCard();">Add Card</a>
+      <div class="table-responsive" id="main">
+      </div>
+  </div>
+  <script>
+    // TODO: use JS framework: Vue, React, or Angular
+    $.ajax({
+        url: '/api/cards/',
+        method: 'get', 
+        cache: false,
+        success: function(cards){
+            var html = '<table class="table table-striped"><tr><th>Card ID</th><th>Name</th><th>Available Balance</th><th>Blocked Amount</th><th></th><th></th><th></th></tr>';
+            for (var i = 0; i < cards.length; i++){
+                var card = cards[i];
+                html += '<tr><td>' + card.CardID + '</td>';
+                html += '<td>' + card.Name + '</td>';
+                html += '<td>' + card.AvailableBalance.toFixed(2) + '</td>';
+                html += '<td>' + card.BlockedAmount.toFixed(2) + '</td>';
+                html += '<td><a href="#" onclick="loadMoney(' + card.CardID + ');">Load Money</a></td>';
+                html += '<td><a href="#" onclick="makeTxn(' + card.CardID + ');">Make Transaction</a></td>';
+                html += '<td><a href="/statement/' + card.CardID + '" target="_blank">Statement</a></td>';
+                html += '</tr>';
+            }
+            html += '</table>';
+            $("#main").html(html);
+        },
+        error: function(){
+            alert('Oops, something wrong. Please try refresh this page.');
+        },
+        // TODO: Handle error
+    });
+
+    var addCard = function(){
+        var name = prompt('Insert card name', '');
+        if (name === null){
+            return;
+        }
+
+        $.ajax({
+            url: '/api/cards/',
+            method: 'post', 
+            cache: false,
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                "Name": name,
+            }),
+            success: function(){
+                location.reload();
+            },
+            // TODO: Handle error
+            error: function(){
+                alert('Oops, something wrong. Please try again.');
+            },
+        });
+    };
+
+    var loadMoney = function(cardID){
+        var text = prompt('How much load into this card?', '0');
+        if (text === null){
+            return;
+        }
+        
+        var amount = Number(text);
+        if (isNaN(amount)){
+            alert('Not a number');
+            return;
+        }else if (amount <= 0){
+            alert('Invalid number, must be greater than zero');
+            return;
+        }
+
+        $.ajax({
+            url: '/api/cards/' + cardID,
+            method: 'post', 
+            cache: false,
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                'Amount': amount,
+            }),
+            success: function(){
+                location.reload();
+            },
+            error: function(){
+                alert('Oops, something wrong. Please try again.');
+            },
+        });
+    }
+
+    var makeTxn = function(cardID){
+        const authToken = "M2YwZjNkMzktY2M5Ny00NzM4LTgzZmEtZWIxNGM5YWJmMWU3";
+        var v = prompt('Transaction amount?', '0');
+        if (v === null){
+            return;
+        }
+
+        var amount = Number(v);
+        if (isNaN(amount)){
+            alert('Not a number');
+            return;
+        }else if (amount <= 0){
+            alert('Invalid number, must be greater than zero');
+            return;
+        }
+
+        var text = prompt('Transaction text?', 'Coffee');
+        if (text === null){
+            return;
+        }
+
+        $.ajax({
+            url: '/api/merchants/transactions/',
+            method: 'post', 
+            cache: false,
+            dataType: 'json',
+            contentType: 'application/json',
+            headers: {
+                'Authorization': authToken,
+            },
+            data: JSON.stringify({
+                'Amount': amount,
+                'CardID': cardID,
+                'Text': text,
+            }),
+            success: function(data){
+                alert("Txn done, id: " + data.TxnID);
+                location.reload();
+            },
+            error: function(xhr){
+                var json = JSON.parse(xhr.responseText);
+                alert('Oops, something wrong. Please try again.' + json.Error);
+            },
+        });
+     }
+   </script>
+</div>
+</body>
+</html>
